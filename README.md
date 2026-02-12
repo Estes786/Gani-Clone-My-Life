@@ -5,7 +5,7 @@
 Platform Cloning untuk semua peran hidup dengan Cloudflare Pages + Hono Framework.
 
 ## 🚀 URLs
-- **Production**: https://71751787.gani-clone-my-life.pages.dev ✅ **LIVE (Phase 2.2)**
+- **Production**: https://3cc6a720.gani-clone-my-life.pages.dev ✅ **LIVE (Phase 2.2)**
 - **Production Main**: https://gani-clone-my-life.pages.dev ✅ **DEPLOYED**
 - **GitHub**: https://github.com/Estes786/Gani-Clone-My-Life ✅ **PUSHED**
 - **Sandbox Dev**: https://3000-i5x9y2n4n6m2y9rer6v7d-b9b802c4.sandbox.novita.ai ✅ **RUNNING**
