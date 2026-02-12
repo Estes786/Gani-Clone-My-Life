@@ -5,9 +5,10 @@
 Platform Cloning untuk semua peran hidup dengan Cloudflare Pages + Hono Framework.
 
 ## 🚀 URLs
-- **Production**: https://50c56965.gani-clone-my-life.pages.dev ✅ **LIVE (Phase 2.2)**
+- **Production**: https://71751787.gani-clone-my-life.pages.dev ✅ **LIVE (Phase 2.2)**
 - **Production Main**: https://gani-clone-my-life.pages.dev ✅ **DEPLOYED**
 - **GitHub**: https://github.com/Estes786/Gani-Clone-My-Life ✅ **PUSHED**
+- **Sandbox Dev**: https://3000-i5x9y2n4n6m2y9rer6v7d-b9b802c4.sandbox.novita.ai ✅ **RUNNING**
 - **Local**: http://localhost:3000
 
 ## 🎯 Phase 2.2 Enhancements (COMPLETE) 🔥
@@ -38,6 +39,86 @@ Platform Cloning untuk semua peran hidup dengan Cloudflare Pages + Hono Framewor
   - Archivist legacy tracking
   - Analyst quality control
   - Future AI learning
+
+## 🔌 Webhook Setup Instructions
+
+### WhatsApp (Whapi) Integration
+1. **Get Webhook URL**: `https://gani-clone-my-life.pages.dev/api/webhooks/whatsapp`
+2. **Configure in Whapi Dashboard**:
+   - Go to https://whapi.cloud/dashboard
+   - Add webhook URL
+   - Token already configured: `Tn25IIq6OQWuRMCGuz0ZXWmYZa3uw8Po`
+3. **Test**: Send message to your WhatsApp number
+4. **Gani will auto-reply** with appropriate role!
+
+### Telegram Bot Integration
+1. **Bot Token**: `8548736484:AAHYJ64i8eAM_1D5P-cBSmE5LHth8VCpZxg`
+2. **Set Webhook**:
+```bash
+curl -X POST https://api.telegram.org/bot8548736484:AAHYJ64i8eAM_1D5P-cBSmE5LHth8VCpZxg/setWebhook \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://gani-clone-my-life.pages.dev/api/webhooks/telegram"}'
+```
+3. **Test**: Send message to your Telegram bot
+4. **Gani will auto-reply** with role detection!
+
+### Instagram & Facebook (Meta API) Integration
+1. **Get Webhook URL**: `https://gani-clone-my-life.pages.dev/api/webhooks/meta`
+2. **Setup Meta Developer App**:
+   - Go to https://developers.facebook.com
+   - Create new app or use existing
+   - Add Instagram/Facebook Messenger product
+   - Configure webhook with URL above
+   - Verify token: `GANI_VERIFY_TOKEN`
+3. **Subscribe to Events**:
+   - `messages` (for DMs)
+   - `messaging_postbacks`
+   - `message_deliveries`
+4. **Test**: Send DM to your IG or FB page
+5. **Gani will auto-reply** with Public/Professional role!
+
+## 🧪 Testing Webhooks
+
+### Test WhatsApp Webhook:
+```bash
+curl -X POST https://gani-clone-my-life.pages.dev/api/webhooks/whatsapp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event": "messages.new",
+    "messages": [{
+      "from": "628123456789",
+      "text": {"body": "Hello, mau tanya project"}
+    }]
+  }'
+```
+
+### Test Telegram Webhook:
+```bash
+curl -X POST https://gani-clone-my-life.pages.dev/api/webhooks/telegram \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": {
+      "from": {"id": 123456},
+      "chat": {"id": 123456},
+      "text": "Test kerja capster"
+    }
+  }'
+```
+
+### Test Meta Webhook:
+```bash
+curl -X POST https://gani-clone-my-life.pages.dev/api/webhooks/meta \
+  -H "Content-Type: application/json" \
+  -d '{
+    "object": "instagram",
+    "entry": [{
+      "messaging": [{
+        "sender": {"id": "123456"},
+        "message": {"text": "Hello from IG"}
+      }]
+    }]
+  }'
+```
 
 ## 🧠 9 Role System
 
