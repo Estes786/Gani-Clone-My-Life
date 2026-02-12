@@ -9,15 +9,18 @@ import { serveStatic } from 'hono/cloudflare-workers'
 // Type definitions for Cloudflare bindings
 type Bindings = {
   // D1 Database untuk Archivist (Legacy Keeper)
-  // DB: D1Database
+  DB: D1Database
   
-  // KV Storage untuk quick access data
+  // Workers AI untuk intelligent responses
+  AI: Ai
+  
+  // KV Storage untuk quick access data (future)
   // KV: KVNamespace
   
-  // R2 untuk file storage
+  // R2 untuk file storage (future)
   // R2: R2Bucket
   
-  // Vectorize untuk 9 Role DNA
+  // Vectorize untuk 9 Role DNA (future)
   // VECTORIZE: VectorizeIndex
 }
 
@@ -186,22 +189,97 @@ app.get('/', (c) => {
                 </div>
             </div>
 
-            <!-- Status Bar -->
-            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h3 class="text-xl font-bold mb-2">System Status</h3>
-                        <p class="text-sm text-gray-400">All 9 roles are ready for deployment 🙏🏻</p>
+            <!-- Status Bar & Quick Links -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
+                <!-- System Status -->
+                <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                    <h3 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                        System Status
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-400">9 Roles Active</span>
+                            <span class="text-green-400 font-semibold">✅ Ready</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-400">D1 Database</span>
+                            <span class="text-green-400 font-semibold">✅ Connected</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-400">Workers AI</span>
+                            <span class="text-green-400 font-semibold">✅ Available</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-400">Webhooks</span>
+                            <span class="text-yellow-400 font-semibold">⚠️ Pending</span>
+                        </div>
                     </div>
-                    <div class="flex space-x-4">
-                        <a href="/api/roles" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-semibold transition-colors">
+                </div>
+                
+                <!-- Quick Links -->
+                <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                    <h3 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-link mr-2"></i>
+                        Quick Links
+                    </h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <a href="/api/roles" class="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg font-semibold transition-colors text-center">
                             <i class="fas fa-list mr-2"></i>
-                            View API
+                            Roles API
                         </a>
-                        <a href="https://github.com/Estes786/Gani-Clone-My-Life" target="_blank" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-semibold transition-colors">
+                        <a href="/api/stats" class="bg-purple-600 hover:bg-purple-700 px-4 py-3 rounded-lg font-semibold transition-colors text-center">
+                            <i class="fas fa-chart-bar mr-2"></i>
+                            Statistics
+                        </a>
+                        <a href="/api/health" class="bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg font-semibold transition-colors text-center">
+                            <i class="fas fa-heartbeat mr-2"></i>
+                            Health Check
+                        </a>
+                        <a href="https://github.com/Estes786/Gani-Clone-My-Life" target="_blank" class="bg-gray-600 hover:bg-gray-700 px-4 py-3 rounded-lg font-semibold transition-colors text-center">
                             <i class="fab fa-github mr-2"></i>
                             GitHub
                         </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Integration Status -->
+            <div class="bg-gradient-to-r from-purple-900/30 to-blue-900/30 rounded-lg p-8 border border-purple-500/30">
+                <h2 class="text-2xl font-bold mb-6 flex items-center">
+                    <i class="fas fa-plug mr-3"></i>
+                    Integration Status (Phase 2.1)
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-black/30 rounded-lg p-4">
+                        <div class="flex items-center mb-3">
+                            <i class="fab fa-instagram text-pink-500 text-2xl mr-3"></i>
+                            <div>
+                                <h3 class="font-semibold">Meta API</h3>
+                                <p class="text-xs text-gray-400">IG & FB Integration</p>
+                            </div>
+                        </div>
+                        <div class="text-yellow-400 text-sm">⚠️ Webhook Ready</div>
+                    </div>
+                    <div class="bg-black/30 rounded-lg p-4">
+                        <div class="flex items-center mb-3">
+                            <i class="fab fa-whatsapp text-green-500 text-2xl mr-3"></i>
+                            <div>
+                                <h3 class="font-semibold">WhatsApp</h3>
+                                <p class="text-xs text-gray-400">Whapi Integration</p>
+                            </div>
+                        </div>
+                        <div class="text-yellow-400 text-sm">⚠️ Webhook Ready</div>
+                    </div>
+                    <div class="bg-black/30 rounded-lg p-4">
+                        <div class="flex items-center mb-3">
+                            <i class="fab fa-telegram text-blue-500 text-2xl mr-3"></i>
+                            <div>
+                                <h3 class="font-semibold">Telegram</h3>
+                                <p class="text-xs text-gray-400">Bot API Ready</p>
+                            </div>
+                        </div>
+                        <div class="text-yellow-400 text-sm">⚠️ Webhook Ready</div>
                     </div>
                 </div>
             </div>
@@ -303,6 +381,234 @@ app.post('/api/test-role', async (c) => {
     simulated_response: response,
     signature: MASTER_DNA.signature_emoji,
   })
+})
+
+// ════════════════════════════════════════════════════════════
+// 🗄️ DATABASE ENDPOINTS (D1 Integration)
+// ════════════════════════════════════════════════════════════
+
+// Get database statistics
+app.get('/api/stats', async (c) => {
+  try {
+    const { DB } = c.env
+    
+    // Get total users
+    const usersResult = await DB.prepare('SELECT COUNT(*) as count FROM users').first()
+    const totalUsers = usersResult?.count || 0
+    
+    // Get total interactions
+    const interactionsResult = await DB.prepare('SELECT COUNT(*) as count FROM interactions').first()
+    const totalInteractions = interactionsResult?.count || 0
+    
+    // Get role usage stats
+    const roleStatsResult = await DB.prepare(`
+      SELECT role, COUNT(*) as count 
+      FROM interactions 
+      GROUP BY role 
+      ORDER BY count DESC
+    `).all()
+    
+    return c.json({
+      success: true,
+      message: 'Statistics retrieved successfully 🙏🏻',
+      data: {
+        total_users: totalUsers,
+        total_interactions: totalInteractions,
+        role_usage: roleStatsResult.results || [],
+        timestamp: new Date().toISOString(),
+      },
+    })
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: 'Database error 🙏🏻',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    }, 500)
+  }
+})
+
+// Add new user
+app.post('/api/users', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { platform_id, platform, name, role_preference } = body
+    
+    if (!platform_id || !platform || !name) {
+      return c.json({
+        success: false,
+        error: 'platform_id, platform, and name are required 🙏🏻',
+      }, 400)
+    }
+    
+    const { DB } = c.env
+    
+    const result = await DB.prepare(`
+      INSERT INTO users (platform_id, platform, name, role_preference)
+      VALUES (?, ?, ?, ?)
+    `).bind(platform_id, platform, name, role_preference || null).run()
+    
+    return c.json({
+      success: true,
+      message: 'User added successfully 🙏🏻',
+      data: {
+        user_id: result.meta.last_row_id,
+        platform_id,
+        platform,
+        name,
+      },
+    })
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: 'Failed to add user 🙏🏻',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    }, 500)
+  }
+})
+
+// Log interaction (used by Archivist)
+app.post('/api/interactions', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { platform_id, platform, role, message_in, message_out, sentiment } = body
+    
+    if (!platform_id || !platform || !role || !message_in) {
+      return c.json({
+        success: false,
+        error: 'platform_id, platform, role, and message_in are required 🙏🏻',
+      }, 400)
+    }
+    
+    const { DB } = c.env
+    
+    // Get or create user
+    let user = await DB.prepare(`
+      SELECT id FROM users WHERE platform_id = ? AND platform = ?
+    `).bind(platform_id, platform).first()
+    
+    if (!user) {
+      // Create new user
+      const userResult = await DB.prepare(`
+        INSERT INTO users (platform_id, platform, name)
+        VALUES (?, ?, ?)
+      `).bind(platform_id, platform, platform_id).run()
+      user = { id: userResult.meta.last_row_id }
+    }
+    
+    // Log interaction
+    const result = await DB.prepare(`
+      INSERT INTO interactions (user_id, platform, role, message_in, message_out, sentiment)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(user.id, platform, role, message_in, message_out || null, sentiment || 'neutral').run()
+    
+    return c.json({
+      success: true,
+      message: 'Interaction logged successfully 🙏🏻',
+      data: {
+        interaction_id: result.meta.last_row_id,
+        user_id: user.id,
+        role,
+        platform,
+      },
+    })
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: 'Failed to log interaction 🙏🏻',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    }, 500)
+  }
+})
+
+// ════════════════════════════════════════════════════════════
+// 🔌 INTEGRATION ENDPOINTS (Meta, WhatsApp, Telegram)
+// ════════════════════════════════════════════════════════════
+
+// Meta API Webhook (for IG & FB)
+app.post('/api/webhooks/meta', async (c) => {
+  try {
+    const body = await c.req.json()
+    
+    // Log webhook received
+    console.log('Meta webhook received:', body)
+    
+    // TODO: Process Meta webhook
+    // - Detect platform (IG or FB)
+    // - Extract message content
+    // - Determine appropriate role
+    // - Generate response
+    // - Log to database
+    
+    return c.json({
+      success: true,
+      message: 'Meta webhook received 🙏🏻',
+      status: 'pending_implementation',
+    })
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: 'Webhook processing failed 🙏🏻',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    }, 500)
+  }
+})
+
+// WhatsApp (Whapi) Webhook
+app.post('/api/webhooks/whatsapp', async (c) => {
+  try {
+    const body = await c.req.json()
+    
+    // Log webhook received
+    console.log('WhatsApp webhook received:', body)
+    
+    // TODO: Process WhatsApp webhook
+    // - Extract contact info & message
+    // - Determine appropriate role
+    // - Generate response with personality
+    // - Send via Whapi API
+    // - Log to database
+    
+    return c.json({
+      success: true,
+      message: 'WhatsApp webhook received 🙏🏻',
+      status: 'pending_implementation',
+    })
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: 'Webhook processing failed 🙏🏻',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    }, 500)
+  }
+})
+
+// Telegram Bot Webhook
+app.post('/api/webhooks/telegram', async (c) => {
+  try {
+    const body = await c.req.json()
+    
+    // Log webhook received
+    console.log('Telegram webhook received:', body)
+    
+    // TODO: Process Telegram webhook
+    // - Extract user info & message
+    // - Determine appropriate role
+    // - Generate response
+    // - Send via Telegram Bot API
+    // - Log to database
+    
+    return c.json({
+      success: true,
+      message: 'Telegram webhook received 🙏🏻',
+      status: 'pending_implementation',
+    })
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: 'Webhook processing failed 🙏🏻',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    }, 500)
+  }
 })
 
 // ════════════════════════════════════════════════════════════

@@ -5,30 +5,29 @@
   "pages_build_output_dir": "./dist",
   "compatibility_flags": [
     "nodejs_compat"
-  ]
-  // "vars": {
-  //   "MY_VAR": "my-variable"
+  ],
+  
+  // 🗄️ D1 Database - Archivist Legacy Storage
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "gani-clone-production",
+      "database_id": "0b85b8f2-052e-4a6f-8d19-c3092c600cba"
+    }
+  ],
+  
+  // 🧠 Vectorize - 9 Role DNA Memory (will be configured next)
+  // "vectorize": {
+  //   "bindings": [
+  //     {
+  //       "binding": "VECTORIZE",
+  //       "index_name": "gani-clone-dna"
+  //     }
+  //   ]
   // },
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "MY_KV_NAMESPACE",
-  //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  //   }
-  // ],
-  // "r2_buckets": [
-  //   {
-  //     "binding": "MY_BUCKET",
-  //     "bucket_name": "my-bucket"
-  //   }
-  // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
-  // "ai": {
-  //   "binding": "AI"
-  // }
+  
+  // 🤖 Workers AI - For intelligent responses
+  "ai": {
+    "binding": "AI"
+  }
 }
