@@ -5,11 +5,45 @@
 Platform Cloning untuk semua peran hidup dengan Cloudflare Pages + Hono Framework.
 
 ## 🚀 URLs
-- **Production**: https://3cc6a720.gani-clone-my-life.pages.dev ✅ **LIVE (Phase 2.2)**
+- **Production (Phase 3)**: https://3afbcbdc.gani-clone-my-life.pages.dev ✅ **LIVE** 🔥
 - **Production Main**: https://gani-clone-my-life.pages.dev ✅ **DEPLOYED**
-- **GitHub**: https://github.com/Estes786/Gani-Clone-My-Life ✅ **PUSHED**
-- **Sandbox Dev**: https://3000-i5x9y2n4n6m2y9rer6v7d-b9b802c4.sandbox.novita.ai ✅ **RUNNING**
+- **GitHub**: https://github.com/Estes786/Gani-Clone-My-Life ✅ **PUSHED (Phase 3)**
+- **Sandbox Dev**: https://3000-ippwo682vvn7pdya519j6-5185f4aa.sandbox.novita.ai ✅ **RUNNING**
 - **Local**: http://localhost:3000
+
+## 🎯 Phase 3 Enhancements (COMPLETE) 🔥🚀
+
+### ✅ ADVANCED AI-POWERED FEATURES - AUTONOMOUS:
+- **Facebook Long-Lived Token API** - ✅ Convert short-lived to 60-day tokens automatically
+- **Advanced Role Detection Algorithm** - ✅ AI-powered with 9 role priority system
+- **Enhanced Response Generation** - ✅ Multiple variations + AI-powered responses
+- **Environment Variables Integration** - ✅ Secure token management via Cloudflare secrets
+- **Workers AI Integration** - ✅ Dynamic AI-generated responses for complex messages
+
+### 🔑 NEW API Endpoints (Phase 3):
+- `POST /api/facebook/long-lived-token` - Convert short-lived Facebook token to 60-day token
+- `POST /api/facebook/token-info` - Check token expiration and validity
+- Enhanced role detection with family, spiritual, and context-aware switching
+- AI-powered response generation using Workers AI (@cf/meta/llama-3.1-8b-instruct)
+
+### 🧠 Enhanced Role Detection System:
+**Priority-based detection** (from highest to lowest):
+1. **Gatekeeper** - Spam patterns (p, hi, test, etc.)
+2. **Family** - Family keywords (ibu, ayah, kakak, dll)
+3. **Spiritual** - Religious content (doa, sholat, alhamdulillah, dll)
+4. **Orchestrator** - Strategic business (project, target, kpi, dll)
+5. **Professional** - Operational work (kerja, client, booking, dll)
+6. **Personal** - Romantic/intimate (sayang, cinta, kangen, dll)
+7. **Public** - Social media content (konten, viral, followers, dll)
+8. **Platform-based** - Auto-detect based on IG/FB/Telegram context
+9. **Default** - Personal role as fallback
+
+### 🎨 Enhanced Response System:
+- **Multiple variations** per role (3-4 templates each)
+- **Random selection** for natural conversation
+- **AI fallback** for complex messages (>20 chars)
+- **Personality-aware** - Matches role tone and style
+- **Mandatory signature** - Always ends with 🙏🏻
 
 ## 🎯 Phase 2.2 Enhancements (COMPLETE) 🔥
 
@@ -43,7 +77,7 @@ Platform Cloning untuk semua peran hidup dengan Cloudflare Pages + Hono Framewor
 ## 🔌 Webhook Setup Instructions
 
 ### WhatsApp (Whapi) Integration
-1. **Get Webhook URL**: `https://gani-clone-my-life.pages.dev/api/webhooks/whatsapp`
+1. **Get Webhook URL**: `https://3afbcbdc.gani-clone-my-life.pages.dev/api/webhooks/whatsapp`
 2. **Configure in Whapi Dashboard**:
    - Go to https://whapi.cloud/dashboard
    - Add webhook URL
@@ -57,14 +91,32 @@ Platform Cloning untuk semua peran hidup dengan Cloudflare Pages + Hono Framewor
 ```bash
 curl -X POST https://api.telegram.org/bot8548736484:AAHYJ64i8eAM_1D5P-cBSmE5LHth8VCpZxg/setWebhook \
   -H "Content-Type: application/json" \
-  -d '{"url":"https://gani-clone-my-life.pages.dev/api/webhooks/telegram"}'
+  -d '{"url":"https://3afbcbdc.gani-clone-my-life.pages.dev/api/webhooks/telegram"}'
 ```
 3. **Test**: Send message to your Telegram bot
 4. **Gani will auto-reply** with role detection!
 
 ### Instagram & Facebook (Meta API) Integration
-1. **Get Webhook URL**: `https://gani-clone-my-life.pages.dev/api/webhooks/meta`
-2. **Setup Meta Developer App**:
+1. **Convert Short-Lived Token to Long-Lived (60 days)**:
+```bash
+curl -X POST https://3afbcbdc.gani-clone-my-life.pages.dev/api/facebook/long-lived-token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "short_lived_token": "YOUR_SHORT_LIVED_TOKEN"
+  }'
+```
+
+2. **Check Token Info and Expiration**:
+```bash
+curl -X POST https://3afbcbdc.gani-clone-my-life.pages.dev/api/facebook/token-info \
+  -H "Content-Type: application/json" \
+  -d '{
+    "access_token": "YOUR_ACCESS_TOKEN"
+  }'
+```
+
+3. **Get Webhook URL**: `https://3afbcbdc.gani-clone-my-life.pages.dev/api/webhooks/meta`
+4. **Setup Meta Developer App**:
    - Go to https://developers.facebook.com
    - Create new app or use existing
    - Add Instagram/Facebook Messenger product
@@ -311,9 +363,11 @@ Content-Type: application/json
 
 ## 📝 Deployment Status
 
-- **Status**: Production Ready (Phase 1)
-- **Platform**: Cloudflare Pages
-- **Last Updated**: 2026-02-12
+- **Status**: Production Ready (Phase 3) ✅ 🔥
+- **Platform**: Cloudflare Pages + Workers AI
+- **Latest Deployment**: 2026-02-13
+- **Features**: 9 Role System + D1 Database + Workers AI + Facebook API Integration
+- **Last Updated**: 2026-02-13 (Phase 3 Complete)
 
 ## 👤 Author
 
