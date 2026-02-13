@@ -14,6 +14,13 @@ type Bindings = {
   // Workers AI untuk intelligent responses
   AI: Ai
   
+  // Environment Variables for API Keys
+  CLOUDFLARE_API_TOKEN: string
+  WHAPI_TOKEN: string
+  TELEGRAM_BOT_TOKEN: string
+  FACEBOOK_APP_ID: string
+  FACEBOOK_APP_SECRET: string
+  
   // KV Storage untuk quick access data (future)
   // KV: KVNamespace
   
@@ -530,68 +537,304 @@ app.post('/api/interactions', async (c) => {
 })
 
 // ════════════════════════════════════════════════════════════
+// 🔑 FACEBOOK LONG-LIVED TOKEN MANAGEMENT
+// ════════════════════════════════════════════════════════════
+
+// Convert short-lived token to long-lived token (60 days)
+app.post('/api/facebook/long-lived-token', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { short_lived_token, app_id, app_secret } = body
+    
+    const appId = app_id || c.env.FACEBOOK_APP_ID || '922959703616504'
+    const appSecret = app_secret || c.env.FACEBOOK_APP_SECRET || 'TtjdCLYka5MVepAtB-h9LUebtXw'
+    
+    if (!short_lived_token) {
+      return c.json({
+        success: false,
+        error: 'short_lived_token is required 🙏🏻',
+      }, 400)
+    }
+    
+    // Exchange for long-lived token
+    const exchangeUrl = `https://graph.facebook.com/v21.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${short_lived_token}`
+    
+    const response = await fetch(exchangeUrl)
+    const data = await response.json()
+    
+    if (data.access_token) {
+      // Get token info
+      const debugUrl = `https://graph.facebook.com/debug_token?input_token=${data.access_token}&access_token=${appId}|${appSecret}`
+      const debugResponse = await fetch(debugUrl)
+      const debugData = await debugResponse.json()
+      
+      return c.json({
+        success: true,
+        message: 'Long-lived token generated successfully 🙏🏻',
+        data: {
+          access_token: data.access_token,
+          token_type: data.token_type,
+          expires_in: data.expires_in || 5184000, // 60 days in seconds
+          expires_in_days: Math.floor((data.expires_in || 5184000) / 86400),
+          debug_info: debugData.data,
+        },
+      })
+    } else {
+      return c.json({
+        success: false,
+        error: 'Failed to exchange token 🙏🏻',
+        details: data,
+      }, 400)
+    }
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: 'Token exchange failed 🙏🏻',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    }, 500)
+  }
+})
+
+// Get current token info and expiration
+app.post('/api/facebook/token-info', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { access_token, app_id, app_secret } = body
+    
+    const appId = app_id || c.env.FACEBOOK_APP_ID || '922959703616504'
+    const appSecret = app_secret || c.env.FACEBOOK_APP_SECRET || 'TtjdCLYka5MVepAtB-h9LUebtXw'
+    
+    if (!access_token) {
+      return c.json({
+        success: false,
+        error: 'access_token is required 🙏🏻',
+      }, 400)
+    }
+    
+    // Debug token
+    const debugUrl = `https://graph.facebook.com/debug_token?input_token=${access_token}&access_token=${appId}|${appSecret}`
+    const response = await fetch(debugUrl)
+    const data = await response.json()
+    
+    if (data.data) {
+      const tokenData = data.data
+      const expiresAt = new Date(tokenData.expires_at * 1000)
+      const now = new Date()
+      const daysRemaining = Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      
+      return c.json({
+        success: true,
+        message: 'Token info retrieved successfully 🙏🏻',
+        data: {
+          app_id: tokenData.app_id,
+          type: tokenData.type,
+          application: tokenData.application,
+          expires_at: expiresAt.toISOString(),
+          expires_in_days: daysRemaining,
+          is_valid: tokenData.is_valid,
+          issued_at: tokenData.issued_at ? new Date(tokenData.issued_at * 1000).toISOString() : null,
+          scopes: tokenData.scopes || [],
+          user_id: tokenData.user_id,
+        },
+      })
+    } else {
+      return c.json({
+        success: false,
+        error: 'Invalid token or failed to get info 🙏🏻',
+        details: data,
+      }, 400)
+    }
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: 'Token info retrieval failed 🙏🏻',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    }, 500)
+  }
+})
+
+// ════════════════════════════════════════════════════════════
 // 🔌 INTEGRATION ENDPOINTS (Meta, WhatsApp, Telegram)
 // ════════════════════════════════════════════════════════════
 
-// Helper: Detect appropriate role based on message content and platform
+// Helper: Advanced AI-powered role detection
 function detectRole(message: string, platform: string, senderId: string): string {
-  // Gatekeeper logic for spam/unwanted messages
-  const spamKeywords = ['p', 'hi', 'hello aja', 'hai', 'test']
-  if (spamKeywords.some(keyword => message.toLowerCase().trim() === keyword)) {
+  const msgLower = message.toLowerCase().trim()
+  
+  // 1️⃣ GATEKEEPER - Filter spam/unwanted (highest priority)
+  const spamPatterns = [
+    /^p$/i,
+    /^hi$/i,
+    /^hello$/i,
+    /^hai$/i,
+    /^test$/i,
+    /^halo$/i,
+    /^hy$/i,
+    /^hey$/i,
+    /^ping$/i,
+  ]
+  if (spamPatterns.some(pattern => pattern.test(msgLower))) {
     return 'gatekeeper'
   }
   
-  // Business/Project keywords → Orchestrator
-  if (message.toLowerCase().includes('project') || message.toLowerCase().includes('bisnis') || 
-      message.toLowerCase().includes('meeting') || message.toLowerCase().includes('deadline')) {
+  // 2️⃣ FAMILY - Family keywords (very specific)
+  const familyKeywords = ['ibu', 'bapak', 'mama', 'papa', 'ayah', 'bunda', 'kakak', 'adik', 'keluarga', 'ortu']
+  if (familyKeywords.some(keyword => msgLower.includes(keyword))) {
+    return 'family'
+  }
+  
+  // 3️⃣ SPIRITUAL PROTECTOR - Religious/spiritual content
+  const spiritualKeywords = ['doa', 'sholat', 'puasa', 'allah', 'alhamdulillah', 'insyaallah', 'masya allah', 'subhanallah', 'syukur', 'ibadah']
+  if (spiritualKeywords.some(keyword => msgLower.includes(keyword))) {
+    return 'spiritual'
+  }
+  
+  // 4️⃣ ORCHESTRATOR - Business/Project management (strategic)
+  const orchestratorKeywords = [
+    'project', 'bisnis', 'meeting', 'deadline', 'target', 'strategy', 'roadmap', 
+    'koordinasi', 'planning', 'budget', 'revenue', 'kpi', 'milestone', 'stakeholder',
+    'partnership', 'kolaborasi', 'expansion', 'scaling'
+  ]
+  if (orchestratorKeywords.some(keyword => msgLower.includes(keyword))) {
     return 'orchestrator'
   }
   
-  // Work/Career keywords → Professional
-  if (message.toLowerCase().includes('kerja') || message.toLowerCase().includes('capster') || 
-      message.toLowerCase().includes('potong') || message.toLowerCase().includes('barber')) {
+  // 5️⃣ PROFESSIONAL - Work/Career/Technical (operational)
+  const professionalKeywords = [
+    'kerja', 'capster', 'potong', 'barber', 'salon', 'client', 'appointment', 
+    'booking', 'schedule', 'shift', 'service', 'teknis', 'skill', 'training',
+    'operational', 'sop', 'prosedur', 'task', 'job'
+  ]
+  if (professionalKeywords.some(keyword => msgLower.includes(keyword))) {
     return 'professional'
   }
   
-  // Social media platforms → Public
-  if (platform === 'IG' || platform === 'FB' || platform === 'TikTok') {
+  // 6️⃣ PERSONAL - Romantic/intimate (careful detection)
+  const personalKeywords = ['sayang', 'cinta', 'kangen', 'rindu', 'love', 'babe', 'dear', 'honey']
+  if (personalKeywords.some(keyword => msgLower.includes(keyword))) {
+    return 'personal'
+  }
+  
+  // 7️⃣ PUBLIC - Social media specific content
+  const publicKeywords = ['konten', 'posting', 'caption', 'story', 'reels', 'followers', 'like', 'comment', 'share', 'viral']
+  if (publicKeywords.some(keyword => msgLower.includes(keyword)) || 
+      platform === 'IG' || platform === 'FB' || platform === 'TikTok') {
     return 'public'
   }
   
-  // Default to Personal for WhatsApp/Telegram
+  // 8️⃣ Platform-based default roles
+  if (platform === 'IG' || platform === 'FB' || platform === 'TikTok' || platform === 'X') {
+    return 'public'
+  }
+  
+  if (platform === 'Telegram' && msgLower.length > 50) {
+    // Longer messages on Telegram = likely business/professional
+    return 'professional'
+  }
+  
+  // 9️⃣ Default fallback
   return 'personal'
 }
 
-// Helper: Generate response based on role and message
-async function generateResponse(role: string, message: string, platform: string): Promise<string> {
+// Helper: Advanced AI-powered response generation
+async function generateResponse(role: string, message: string, platform: string, env?: any): Promise<string> {
   const roleConfig = ROLES[role as keyof typeof ROLES]
   
   if (!roleConfig) {
     return `Terima kasih pesannya, w proses dulu y 🙏🏻`
   }
   
-  // Gatekeeper responses (filter spam)
-  if (role === 'gatekeeper') {
-    return `Maaf, untuk chat yang lebih efektif, tolong sertakan tujuan atau pertanyaan yang jelas y. Terima kasih 🙏🏻`
+  // Role-specific response templates with variations
+  const responses: Record<string, string[]> = {
+    gatekeeper: [
+      `Maaf, untuk chat yang lebih efektif, tolong sertakan tujuan atau pertanyaan yang jelas y. Terima kasih 🙏🏻`,
+      `Halo, w appreciate reach out-nya. Tapi supaya lebih efisien, bisa kasih context atau tujuan chat-nya dulu? Terima kasih 🙏🏻`,
+      `Thanks udah chat. Untuk respon yang lebih cepat, bisa langsung to the point aja pertanyaan atau kebutuhannya? 🙏🏻`,
+    ],
+    orchestrator: [
+      `W terima pesannya. Untuk urusan project atau bisnis, w koordinasi dulu y. Nanti w update 🙏🏻`,
+      `Noted untuk project discussion-nya. W review dulu dan kabarin as soon as possible 🙏🏻`,
+      `Sip, w catat. Untuk strategic planning-nya w susun dulu, nnti w circle back with timeline 🙏🏻`,
+      `Okay, w tangkep maksudnya. W koordinasi sm stakeholder dulu, update segera y 🙏🏻`,
+    ],
+    professional: [
+      `Untuk urusan kerja/teknis, noted. W cek dulu dan kabarin y 🙏🏻`,
+      `Sip, w terima requestnya. W process dulu dan confirm secepatnya 🙏🏻`,
+      `Okay understood. W handle dan update progress-nya dalam waktu dekat 🙏🏻`,
+      `Thanks infonya. W review dulu dari sisi teknis dan operasional, nanti w follow up 🙏🏻`,
+    ],
+    public: [
+      `Terima kasih ya udah reach out! Seneng banget bisa connect. W follow up secepatnya 🙏🏻`,
+      `Appreciate banget support-nya! W baca dan akan respond lebih detail soon 🙏🏻`,
+      `Thanks ya udah engage! Value banget feedback atau pesannya. W balas lebih lengkap nanti 🙏🏻`,
+      `Seneng banget bisa dapet message dari kamu! W proses dan balas secepatnya y 🙏🏻`,
+    ],
+    personal: [
+      `Terima kasih pesannya, w baca dan bakal balas secepatnya y 🙏🏻`,
+      `Noted, w appreciate reach out-nya. W respond lebih detail soon 🙏🏻`,
+      `Thanks udah chat, w baca baik-baik dan balas dalam waktu dekat 🙏🏻`,
+      `Sip, w terima pesannya. W balas proper nanti y 🙏🏻`,
+    ],
+    family: [
+      `Iya, terima kasih sudah mengingatkan. Insya Allah w usahakan secepatnya 🙏🏻`,
+      `Baik, w noted. Mohon maaf jika belum sempat respond cepat. Terima kasih pengertiannya 🙏🏻`,
+      `Iya siap, w dengar dan akan w perhatikan. Terima kasih ya 🙏🏻`,
+      `Baik, w pahami. Mohon doanya supaya semua lancar y. Terima kasih 🙏🏻`,
+    ],
+    spiritual: [
+      `Aamiin, terima kasih remindernya. Semoga kita selalu dijaga dan diberi kemudahan 🙏🏻`,
+      `Alhamdulillah, terima kasih sudah mengingatkan. Semoga kita istiqomah y 🙏🏻`,
+      `Barakallah, w appreciate reminder-nya. Semoga Allah permudah segala urusan kita 🙏🏻`,
+      `Aamiin ya rabbal alamin. Jazakallah khairan sudah remind, semoga berkah 🙏🏻`,
+    ],
+    archivist: [
+      `Data logged successfully. Entry recorded for future reference 🙏🏻`,
+      `Interaction archived. Legacy system updated 🙏🏻`,
+    ],
+    analyst: [
+      `Analysis complete. Quality metrics recorded 🙏🏻`,
+      `Performance audit logged. Insights available for review 🙏🏻`,
+    ],
   }
   
-  // Orchestrator responses (project/business)
-  if (role === 'orchestrator') {
-    return `W terima pesannya. Untuk urusan project atau bisnis, w koordinasi dulu y. Nanti w update 🙏🏻`
+  // Get random variation from role responses
+  const roleResponses = responses[role] || responses['personal']
+  const randomResponse = roleResponses[Math.floor(Math.random() * roleResponses.length)]
+  
+  // Optional: Use Workers AI for more dynamic responses (if available)
+  if (env?.AI && message.length > 20) {
+    try {
+      const aiPrompt = `You are ${roleConfig.name} with tone: ${roleConfig.tone}.
+Message received: "${message}"
+Platform: ${platform}
+
+Generate a brief (max 2 sentences), natural Indonesian response that:
+1. Matches the ${role} personality
+2. Uses shortcuts like: w, sdh, otw, y, g
+3. Is NOT robotic or formal
+4. MUST end with 🙏🏻 emoji
+
+Response:`
+
+      const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+        prompt: aiPrompt,
+        max_tokens: 100,
+      })
+      
+      if (aiResponse?.response) {
+        let generatedResponse = aiResponse.response.trim()
+        // Ensure it ends with 🙏🏻
+        if (!generatedResponse.endsWith('🙏🏻')) {
+          generatedResponse += ' 🙏🏻'
+        }
+        return generatedResponse
+      }
+    } catch (aiError) {
+      console.log('AI generation failed, using template:', aiError)
+    }
   }
   
-  // Professional responses (work/career)
-  if (role === 'professional') {
-    return `Untuk urusan kerja/teknis, noted. W cek dulu dan kabarin y 🙏🏻`
-  }
-  
-  // Public responses (social media)
-  if (role === 'public') {
-    return `Terima kasih ya udah reach out! Seneng banget bisa connect. W follow up secepatnya 🙏🏻`
-  }
-  
-  // Personal/default responses
-  return `Terima kasih pesannya, w baca dan bakal balas secepatnya y 🙏🏻`
+  return randomResponse
 }
 
 // Meta API Webhook (for IG & FB)
@@ -628,7 +871,7 @@ app.post('/api/webhooks/meta', async (c) => {
       
       // Detect role and generate response
       const role = detectRole(messageText, platform, senderId)
-      const response = await generateResponse(role, messageText, platform)
+      const response = await generateResponse(role, messageText, platform, c.env)
       
       // Log to database
       const { DB } = c.env
@@ -685,10 +928,10 @@ app.post('/api/webhooks/whatsapp', async (c) => {
     
     // Detect role and generate response
     const role = detectRole(messageText, platform, senderId)
-    const response = await generateResponse(role, messageText, platform)
+    const response = await generateResponse(role, messageText, platform, c.env)
     
     // Send response via Whapi API
-    const WHAPI_TOKEN = 'Tn25IIq6OQWuRMCGuz0ZXWmYZa3uw8Po'
+    const WHAPI_TOKEN = c.env.WHAPI_TOKEN || 'Tn25IIq6OQWuRMCGuz0ZXWmYZa3uw8Po'
     const WHAPI_URL = 'https://gate.whapi.cloud/messages/text'
     
     try {
@@ -756,10 +999,10 @@ app.post('/api/webhooks/telegram', async (c) => {
     
     // Detect role and generate response
     const role = detectRole(messageText, platform, String(senderId))
-    const response = await generateResponse(role, messageText, platform)
+    const response = await generateResponse(role, messageText, platform, c.env)
     
     // Send response via Telegram Bot API
-    const TELEGRAM_TOKEN = '8548736484:AAHYJ64i8eAM_1D5P-cBSmE5LHth8VCpZxg'
+    const TELEGRAM_TOKEN = c.env.TELEGRAM_BOT_TOKEN || '8548736484:AAHYJ64i8eAM_1D5P-cBSmE5LHth8VCpZxg'
     const TELEGRAM_URL = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`
     
     try {
