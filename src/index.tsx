@@ -932,14 +932,30 @@ app.post('/api/webhooks/whatsapp', async (c) => {
     
     // 🔧 FIX: Check if we already processed this message (prevent double response)
     const { DB } = c.env
+    
+    // First get user_id from senderId
+    let user = await DB.prepare(`
+      SELECT id FROM users WHERE platform_id = ? AND platform = 'WA'
+    `).bind(senderId).first()
+    
+    if (!user) {
+      // Create user if not exists
+      const userResult = await DB.prepare(`
+        INSERT INTO users (platform_id, platform, name)
+        VALUES (?, ?, ?)
+      `).bind(senderId, 'WA', `WA_${senderId}`).run()
+      user = { id: userResult.meta.last_row_id }
+    }
+    
+    // Check for duplicate message
     const existingMessage = await DB.prepare(`
       SELECT id FROM interactions 
-      WHERE platform = 'WA' 
-      AND platform_id = ? 
+      WHERE user_id = ? 
+      AND platform = 'WA' 
       AND message_in = ?
       AND created_at > datetime('now', '-5 minutes')
       LIMIT 1
-    `).bind(senderId, messageText).first()
+    `).bind(user.id, messageText).first()
     
     if (existingMessage) {
       console.log('⚠️ Duplicate WhatsApp message detected, skipping...')
@@ -987,21 +1003,8 @@ app.post('/api/webhooks/whatsapp', async (c) => {
       console.error('Whapi send error:', error)
     }
     
-    // Log to database (deduplication already done above)
+    // Log to database (user already retrieved above for deduplication)
     try {
-      // Get or create user
-      let user = await DB.prepare(`
-        SELECT id FROM users WHERE platform_id = ? AND platform = ?
-      `).bind(senderId, platform).first()
-      
-      if (!user) {
-        const userResult = await DB.prepare(`
-          INSERT INTO users (platform_id, platform, name)
-          VALUES (?, ?, ?)
-        `).bind(senderId, platform, `WA_${senderId}`).run()
-        user = { id: userResult.meta.last_row_id }
-      }
-      
       // Log interaction
       await DB.prepare(`
         INSERT INTO interactions (user_id, platform, role, message_in, message_out, sentiment)
@@ -1059,14 +1062,30 @@ app.post('/api/webhooks/telegram', async (c) => {
     
     // 🔧 FIX: Check if we already processed this message ID
     const { DB } = c.env
+    
+    // First get user_id from senderId
+    let user = await DB.prepare(`
+      SELECT id FROM users WHERE platform_id = ? AND platform = 'Telegram'
+    `).bind(String(senderId)).first()
+    
+    if (!user) {
+      // Create user if not exists
+      const userResult = await DB.prepare(`
+        INSERT INTO users (platform_id, platform, name)
+        VALUES (?, ?, ?)
+      `).bind(String(senderId), 'Telegram', `User_${senderId}`).run()
+      user = { id: userResult.meta.last_row_id }
+    }
+    
+    // Check for duplicate message
     const existingMessage = await DB.prepare(`
       SELECT id FROM interactions 
-      WHERE platform = 'Telegram' 
-      AND platform_id = ? 
+      WHERE user_id = ? 
+      AND platform = 'Telegram' 
       AND message_in = ?
       AND created_at > datetime('now', '-5 minutes')
       LIMIT 1
-    `).bind(String(senderId), messageText).first()
+    `).bind(user.id, messageText).first()
     
     if (existingMessage) {
       console.log('⚠️ Duplicate message detected, skipping...')
@@ -1100,21 +1119,8 @@ app.post('/api/webhooks/telegram', async (c) => {
       console.error('Telegram send error:', sendError)
     }
     
-    // Log to database (deduplication already done above)
+    // Log to database (user already retrieved above for deduplication)
     try {
-      // Get or create user
-      let user = await DB.prepare(`
-        SELECT id FROM users WHERE platform_id = ? AND platform = ?
-      `).bind(String(senderId), platform).first()
-      
-      if (!user) {
-        const userResult = await DB.prepare(`
-          INSERT INTO users (platform_id, platform, name)
-          VALUES (?, ?, ?)
-        `).bind(String(senderId), platform, `User_${senderId}`).run()
-        user = { id: userResult.meta.last_row_id }
-      }
-      
       // Log interaction with message_id tracking
       await DB.prepare(`
         INSERT INTO interactions (user_id, platform, role, message_in, message_out, sentiment)
