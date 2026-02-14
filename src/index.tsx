@@ -20,6 +20,7 @@ type Bindings = {
   TELEGRAM_BOT_TOKEN: string
   FACEBOOK_APP_ID: string
   FACEBOOK_APP_SECRET: string
+  META_APP_SECRET_NEW: string
   
   // KV Storage untuk quick access data (future)
   // KV: KVNamespace
@@ -546,8 +547,9 @@ app.post('/api/facebook/long-lived-token', async (c) => {
     const body = await c.req.json()
     const { short_lived_token, app_id, app_secret } = body
     
+    // Use NEW App Secret from .dev.vars
     const appId = app_id || c.env.FACEBOOK_APP_ID || '922959703616504'
-    const appSecret = app_secret || c.env.FACEBOOK_APP_SECRET || 'TtjdCLYka5MVepAtB-h9LUebtXw'
+    const appSecret = app_secret || c.env.META_APP_SECRET_NEW || c.env.FACEBOOK_APP_SECRET || '20badf7e10c4ccadd029aa27cb1abccf'
     
     if (!short_lived_token) {
       return c.json({
@@ -601,8 +603,9 @@ app.post('/api/facebook/token-info', async (c) => {
     const body = await c.req.json()
     const { access_token, app_id, app_secret } = body
     
+    // Use NEW App Secret from .dev.vars
     const appId = app_id || c.env.FACEBOOK_APP_ID || '922959703616504'
-    const appSecret = app_secret || c.env.FACEBOOK_APP_SECRET || 'TtjdCLYka5MVepAtB-h9LUebtXw'
+    const appSecret = app_secret || c.env.META_APP_SECRET_NEW || c.env.FACEBOOK_APP_SECRET || '20badf7e10c4ccadd029aa27cb1abccf'
     
     if (!access_token) {
       return c.json({
