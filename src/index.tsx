@@ -21,6 +21,9 @@ type Bindings = {
   FACEBOOK_APP_ID: string
   FACEBOOK_APP_SECRET: string
   META_APP_SECRET_NEW: string
+  META_USER_LONG_TOKEN: string
+  META_PAGE_TOKEN: string
+  META_PAGE_ID: string
   
   // KV Storage untuk quick access data (future)
   // KV: KVNamespace
@@ -839,6 +842,515 @@ Response:`
   
   return randomResponse
 }
+
+// ════════════════════════════════════════════════════════════
+// 📘 FACEBOOK PAGES API INTEGRATION
+// ════════════════════════════════════════════════════════════
+
+// Facebook: Get Page Info
+app.get('/api/facebook/page/info', async (c) => {
+  try {
+    const { META_PAGE_TOKEN, META_PAGE_ID } = c.env
+    
+    if (!META_PAGE_TOKEN || !META_PAGE_ID) {
+      return c.json({ 
+        success: false, 
+        error: 'Facebook Page credentials not configured 🙏🏻' 
+      }, 400)
+    }
+    
+    const response = await fetch(
+      `https://graph.facebook.com/v20.0/${META_PAGE_ID}?fields=id,name,username,category,about,phone,website,followers_count,fan_count&access_token=${META_PAGE_TOKEN}`
+    )
+    
+    const data = await response.json()
+    
+    if (data.error) {
+      return c.json({ 
+        success: false, 
+        error: 'Failed to fetch page info 🙏🏻', 
+        details: data.error 
+      }, 400)
+    }
+    
+    return c.json({
+      success: true,
+      message: 'Page info retrieved successfully 🙏🏻',
+      data
+    })
+    
+  } catch (error: any) {
+    console.error('Facebook page info error:', error)
+    return c.json({ 
+      success: false, 
+      error: 'Server error 🙏🏻', 
+      details: error.message 
+    }, 500)
+  }
+})
+
+// Facebook: Post to Page
+app.post('/api/facebook/page/post', async (c) => {
+  try {
+    const { META_PAGE_TOKEN, META_PAGE_ID } = c.env
+    const { message, link, photo_url } = await c.req.json()
+    
+    if (!META_PAGE_TOKEN || !META_PAGE_ID) {
+      return c.json({ 
+        success: false, 
+        error: 'Facebook Page credentials not configured 🙏🏻' 
+      }, 400)
+    }
+    
+    if (!message && !photo_url) {
+      return c.json({ 
+        success: false, 
+        error: 'Message or photo_url required 🙏🏻' 
+      }, 400)
+    }
+    
+    // Prepare post data
+    const postData: any = {}
+    if (message) postData.message = message
+    if (link) postData.link = link
+    
+    const endpoint = photo_url 
+      ? `https://graph.facebook.com/v20.0/${META_PAGE_ID}/photos`
+      : `https://graph.facebook.com/v20.0/${META_PAGE_ID}/feed`
+    
+    if (photo_url) {
+      postData.url = photo_url
+      postData.caption = message || ''
+    }
+    
+    const formData = new URLSearchParams(postData)
+    formData.append('access_token', META_PAGE_TOKEN)
+    
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString()
+    })
+    
+    const data = await response.json()
+    
+    if (data.error) {
+      return c.json({ 
+        success: false, 
+        error: 'Failed to post to Facebook Page 🙏🏻', 
+        details: data.error 
+      }, 400)
+    }
+    
+    return c.json({
+      success: true,
+      message: 'Post published to Facebook Page successfully 🙏🏻',
+      data
+    })
+    
+  } catch (error: any) {
+    console.error('Facebook post error:', error)
+    return c.json({ 
+      success: false, 
+      error: 'Server error 🙏🏻', 
+      details: error.message 
+    }, 500)
+  }
+})
+
+// Facebook: Get Page Feed
+app.get('/api/facebook/page/feed', async (c) => {
+  try {
+    const { META_PAGE_TOKEN, META_PAGE_ID } = c.env
+    const limit = c.req.query('limit') || '10'
+    
+    if (!META_PAGE_TOKEN || !META_PAGE_ID) {
+      return c.json({ 
+        success: false, 
+        error: 'Facebook Page credentials not configured 🙏🏻' 
+      }, 400)
+    }
+    
+    const response = await fetch(
+      `https://graph.facebook.com/v20.0/${META_PAGE_ID}/feed?fields=id,message,created_time,likes.summary(true),comments.summary(true),shares&limit=${limit}&access_token=${META_PAGE_TOKEN}`
+    )
+    
+    const data = await response.json()
+    
+    if (data.error) {
+      return c.json({ 
+        success: false, 
+        error: 'Failed to fetch page feed 🙏🏻', 
+        details: data.error 
+      }, 400)
+    }
+    
+    return c.json({
+      success: true,
+      message: 'Page feed retrieved successfully 🙏🏻',
+      data: data.data || [],
+      paging: data.paging
+    })
+    
+  } catch (error: any) {
+    console.error('Facebook feed error:', error)
+    return c.json({ 
+      success: false, 
+      error: 'Server error 🙏🏻', 
+      details: error.message 
+    }, 500)
+  }
+})
+
+// ════════════════════════════════════════════════════════════
+// 📸 INSTAGRAM BUSINESS API INTEGRATION
+// ════════════════════════════════════════════════════════════
+
+// Instagram: Get Business Account Info
+app.get('/api/instagram/account', async (c) => {
+  try {
+    const { META_PAGE_TOKEN, META_PAGE_ID } = c.env
+    
+    if (!META_PAGE_TOKEN || !META_PAGE_ID) {
+      return c.json({ 
+        success: false, 
+        error: 'Meta credentials not configured 🙏🏻' 
+      }, 400)
+    }
+    
+    // First get Instagram Business Account ID from Page
+    const pageResponse = await fetch(
+      `https://graph.facebook.com/v20.0/${META_PAGE_ID}?fields=instagram_business_account&access_token=${META_PAGE_TOKEN}`
+    )
+    
+    const pageData = await pageResponse.json()
+    
+    if (pageData.error || !pageData.instagram_business_account) {
+      return c.json({ 
+        success: false, 
+        error: 'Instagram Business Account not linked to Page 🙏🏻', 
+        details: pageData.error,
+        hint: 'Link your Instagram Business Account to your Facebook Page first'
+      }, 400)
+    }
+    
+    const igAccountId = pageData.instagram_business_account.id
+    
+    // Get Instagram Account details
+    const igResponse = await fetch(
+      `https://graph.facebook.com/v20.0/${igAccountId}?fields=id,username,name,biography,followers_count,follows_count,media_count,profile_picture_url&access_token=${META_PAGE_TOKEN}`
+    )
+    
+    const igData = await igResponse.json()
+    
+    if (igData.error) {
+      return c.json({ 
+        success: false, 
+        error: 'Failed to fetch Instagram account info 🙏🏻', 
+        details: igData.error 
+      }, 400)
+    }
+    
+    return c.json({
+      success: true,
+      message: 'Instagram account info retrieved successfully 🙏🏻',
+      data: igData
+    })
+    
+  } catch (error: any) {
+    console.error('Instagram account info error:', error)
+    return c.json({ 
+      success: false, 
+      error: 'Server error 🙏🏻', 
+      details: error.message 
+    }, 500)
+  }
+})
+
+// Instagram: Get Media (Posts)
+app.get('/api/instagram/media', async (c) => {
+  try {
+    const { META_PAGE_TOKEN, META_PAGE_ID } = c.env
+    const limit = c.req.query('limit') || '10'
+    
+    if (!META_PAGE_TOKEN || !META_PAGE_ID) {
+      return c.json({ 
+        success: false, 
+        error: 'Meta credentials not configured 🙏🏻' 
+      }, 400)
+    }
+    
+    // Get Instagram Business Account ID
+    const pageResponse = await fetch(
+      `https://graph.facebook.com/v20.0/${META_PAGE_ID}?fields=instagram_business_account&access_token=${META_PAGE_TOKEN}`
+    )
+    
+    const pageData = await pageResponse.json()
+    
+    if (!pageData.instagram_business_account) {
+      return c.json({ 
+        success: false, 
+        error: 'Instagram Business Account not linked 🙏🏻' 
+      }, 400)
+    }
+    
+    const igAccountId = pageData.instagram_business_account.id
+    
+    // Get media
+    const mediaResponse = await fetch(
+      `https://graph.facebook.com/v20.0/${igAccountId}/media?fields=id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,like_count,comments_count&limit=${limit}&access_token=${META_PAGE_TOKEN}`
+    )
+    
+    const mediaData = await mediaResponse.json()
+    
+    if (mediaData.error) {
+      return c.json({ 
+        success: false, 
+        error: 'Failed to fetch Instagram media 🙏🏻', 
+        details: mediaData.error 
+      }, 400)
+    }
+    
+    return c.json({
+      success: true,
+      message: 'Instagram media retrieved successfully 🙏🏻',
+      data: mediaData.data || [],
+      paging: mediaData.paging
+    })
+    
+  } catch (error: any) {
+    console.error('Instagram media error:', error)
+    return c.json({ 
+      success: false, 
+      error: 'Server error 🙏🏻', 
+      details: error.message 
+    }, 500)
+  }
+})
+
+// Instagram: Publish Photo
+app.post('/api/instagram/publish-photo', async (c) => {
+  try {
+    const { META_PAGE_TOKEN, META_PAGE_ID } = c.env
+    const { image_url, caption } = await c.req.json()
+    
+    if (!META_PAGE_TOKEN || !META_PAGE_ID) {
+      return c.json({ 
+        success: false, 
+        error: 'Meta credentials not configured 🙏🏻' 
+      }, 400)
+    }
+    
+    if (!image_url) {
+      return c.json({ 
+        success: false, 
+        error: 'image_url required 🙏🏻' 
+      }, 400)
+    }
+    
+    // Get Instagram Business Account ID
+    const pageResponse = await fetch(
+      `https://graph.facebook.com/v20.0/${META_PAGE_ID}?fields=instagram_business_account&access_token=${META_PAGE_TOKEN}`
+    )
+    
+    const pageData = await pageResponse.json()
+    
+    if (!pageData.instagram_business_account) {
+      return c.json({ 
+        success: false, 
+        error: 'Instagram Business Account not linked 🙏🏻' 
+      }, 400)
+    }
+    
+    const igAccountId = pageData.instagram_business_account.id
+    
+    // Step 1: Create media container
+    const containerData = new URLSearchParams({
+      image_url,
+      caption: caption || '',
+      access_token: META_PAGE_TOKEN
+    })
+    
+    const containerResponse = await fetch(
+      `https://graph.facebook.com/v20.0/${igAccountId}/media`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: containerData.toString()
+      }
+    )
+    
+    const containerResult = await containerResponse.json()
+    
+    if (containerResult.error) {
+      return c.json({ 
+        success: false, 
+        error: 'Failed to create media container 🙏🏻', 
+        details: containerResult.error 
+      }, 400)
+    }
+    
+    const creationId = containerResult.id
+    
+    // Step 2: Publish media
+    const publishData = new URLSearchParams({
+      creation_id: creationId,
+      access_token: META_PAGE_TOKEN
+    })
+    
+    const publishResponse = await fetch(
+      `https://graph.facebook.com/v20.0/${igAccountId}/media_publish`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: publishData.toString()
+      }
+    )
+    
+    const publishResult = await publishResponse.json()
+    
+    if (publishResult.error) {
+      return c.json({ 
+        success: false, 
+        error: 'Failed to publish to Instagram 🙏🏻', 
+        details: publishResult.error 
+      }, 400)
+    }
+    
+    return c.json({
+      success: true,
+      message: 'Photo published to Instagram successfully 🙏🏻',
+      media_id: publishResult.id
+    })
+    
+  } catch (error: any) {
+    console.error('Instagram publish error:', error)
+    return c.json({ 
+      success: false, 
+      error: 'Server error 🙏🏻', 
+      details: error.message 
+    }, 500)
+  }
+})
+
+// ════════════════════════════════════════════════════════════
+// 🧵 THREADS API INTEGRATION
+// ════════════════════════════════════════════════════════════
+
+// Threads: Create Thread Post
+app.post('/api/threads/post', async (c) => {
+  try {
+    const { META_USER_LONG_TOKEN } = c.env
+    const { text, media_url } = await c.req.json()
+    
+    if (!META_USER_LONG_TOKEN) {
+      return c.json({ 
+        success: false, 
+        error: 'Threads token not configured 🙏🏻',
+        hint: 'Need long-lived user access token with threads_content_publish permission'
+      }, 400)
+    }
+    
+    if (!text) {
+      return c.json({ 
+        success: false, 
+        error: 'text required for Threads post 🙏🏻' 
+      }, 400)
+    }
+    
+    // Get User ID first
+    const userResponse = await fetch(
+      `https://graph.facebook.com/v20.0/me?fields=id&access_token=${META_USER_LONG_TOKEN}`
+    )
+    
+    const userData = await userResponse.json()
+    
+    if (userData.error) {
+      return c.json({ 
+        success: false, 
+        error: 'Failed to get user ID 🙏🏻', 
+        details: userData.error 
+      }, 400)
+    }
+    
+    const userId = userData.id
+    
+    // Create thread container
+    const containerData: any = {
+      media_type: 'TEXT',
+      text,
+      access_token: META_USER_LONG_TOKEN
+    }
+    
+    if (media_url) {
+      containerData.media_type = 'IMAGE'
+      containerData.image_url = media_url
+    }
+    
+    const containerParams = new URLSearchParams(containerData)
+    
+    const containerResponse = await fetch(
+      `https://graph.facebook.com/v20.0/${userId}/threads`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: containerParams.toString()
+      }
+    )
+    
+    const containerResult = await containerResponse.json()
+    
+    if (containerResult.error) {
+      return c.json({ 
+        success: false, 
+        error: 'Failed to create Threads container 🙏🏻', 
+        details: containerResult.error,
+        hint: 'Make sure you have threads_content_publish permission'
+      }, 400)
+    }
+    
+    const containerId = containerResult.id
+    
+    // Publish thread
+    const publishParams = new URLSearchParams({
+      creation_id: containerId,
+      access_token: META_USER_LONG_TOKEN
+    })
+    
+    const publishResponse = await fetch(
+      `https://graph.facebook.com/v20.0/${userId}/threads_publish`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: publishParams.toString()
+      }
+    )
+    
+    const publishResult = await publishResponse.json()
+    
+    if (publishResult.error) {
+      return c.json({ 
+        success: false, 
+        error: 'Failed to publish Threads post 🙏🏻', 
+        details: publishResult.error 
+      }, 400)
+    }
+    
+    return c.json({
+      success: true,
+      message: 'Thread published successfully 🙏🏻',
+      thread_id: publishResult.id
+    })
+    
+  } catch (error: any) {
+    console.error('Threads publish error:', error)
+    return c.json({ 
+      success: false, 
+      error: 'Server error 🙏🏻', 
+      details: error.message 
+    }, 500)
+  }
+})
 
 // Meta API Webhook (for IG & FB)
 app.post('/api/webhooks/meta', async (c) => {
